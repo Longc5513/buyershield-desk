@@ -58,6 +58,14 @@ BuyerShield Desk uses the live deployed `BuyerProtectionOracle` contract:
 - Explorer transaction:
   `https://explorer-studio.genlayer.com/tx/0x018150f0c5fd760c627a5998054024df784663388daabcf950466e821f8a2473`
 
+## Live app
+
+Production deployment on **July 26, 2026**:
+
+- App URL: `https://buyershield-desk.vercel.app`
+- Deployment URL:
+  `https://buyershield-desk-3o0gpxa0p-longchuns-projects.vercel.app`
+
 ## App surfaces
 
 The desk exposes four operator surfaces:
