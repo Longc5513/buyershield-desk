@@ -1,6 +1,7 @@
 import { presets } from "./data/presets.js";
 import {
   DEFAULT_CONTRACT_ADDRESS,
+  createReadClient,
   connectStudionetWallet,
   createClaim,
   addMerchantResponse,
@@ -9,7 +10,9 @@ import {
 } from "./lib/oracle-client.js";
 
 const state = {
-  client: null,
+  readClient: createReadClient(),
+  writeClient: null,
+  connectedAccount: "",
   recentClaims: JSON.parse(localStorage.getItem("buyershield-recent-claims") || "[]"),
   lastLogFingerprint: ""
 };
@@ -69,7 +72,16 @@ function focusField(field) {
 function normalizeErrorMessage(error, fallback) {
   const raw = String(error?.message || fallback || "Request failed.");
 
+  if (raw.includes("No browser wallet was found")) {
+    return "No browser wallet was detected. Open this app in MetaMask or another wallet-enabled browser.";
+  }
+  if (raw.includes("does not match the account currently selected")) {
+    return "The address in the field does not match the wallet account you selected. Switch wallet account or clear the field and reconnect.";
+  }
   if (raw.includes("not been authorized by the user")) {
+    return "Wallet approval was rejected. Approve the transaction in your wallet and try again.";
+  }
+  if (raw.includes("User rejected")) {
     return "Wallet approval was rejected. Approve the transaction in your wallet and try again.";
   }
   if (raw.includes("Missing or invalid parameters")) {
@@ -129,11 +141,32 @@ function updateDecisionPanel(claim) {
   }
 }
 
-function requireConnectedClient() {
-  if (!state.client) {
+function requireWriteClient() {
+  if (!state.writeClient) {
     throw new Error("Connect the desk with a Studionet wallet account first.");
   }
-  return state.client;
+  return state.writeClient;
+}
+
+function readClient() {
+  return state.readClient;
+}
+
+function browserProvider() {
+  return window.ethereum;
+}
+
+function shortenAddress(address) {
+  const normalized = String(address || "").trim();
+  if (normalized.length < 12) return normalized;
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+}
+
+function syncConnectedAccount(address) {
+  if (!address) return;
+  state.connectedAccount = address;
+  els.walletAccount.value = address;
+  localStorage.setItem("buyershield-wallet-account", address);
 }
 
 function contractAddress() {
@@ -180,20 +213,18 @@ els.clearLogButton?.addEventListener("click", () => {
 });
 
 els.connectButton.addEventListener("click", async () => {
-  const walletAccount = els.walletAccount.value.trim();
-  if (!walletAccount) {
-    setConnectionStatus("Enter wallet first", "error");
-    logEvent("Connection blocked", "Enter a Studionet wallet address before connecting the desk.");
-    els.walletAccount.focus();
-    return;
-  }
-
   try {
-    state.client = await connectStudionetWallet(walletAccount);
-    localStorage.setItem("buyershield-wallet-account", walletAccount);
+    const walletAccount = els.walletAccount.value.trim();
+    const session = await connectStudionetWallet({
+      provider: browserProvider(),
+      account: walletAccount || undefined
+    });
+    state.writeClient = session.client;
+    syncConnectedAccount(session.account);
     setConnectionStatus("Connected", "success");
-    logEvent("Desk connected", `Ready to use contract ${contractAddress()}.`);
+    logEvent("Desk connected", `Wallet ${shortenAddress(session.account)} is ready for contract ${contractAddress()}.`);
   } catch (error) {
+    state.writeClient = null;
     setConnectionStatus("Connection failed", "error");
     logEvent("Connection failed", normalizeErrorMessage(error, "Wallet connection failed."));
   }
@@ -212,7 +243,7 @@ els.createClaimForm.addEventListener("submit", async (event) => {
     requireFormValue(form.orderFacts, "Order facts", 24, "Summarize the buyer timeline and delivery facts.");
     requireFormValue(form.claimReason, "Claim reason", 16, "Explain why the buyer should receive a remedy.");
     const receipt = await createClaim({
-      client: requireConnectedClient(),
+      client: requireWriteClient(),
       contractAddress: contractAddress(),
       claimId: form.claimId.value,
       title: form.title.value,
@@ -240,7 +271,7 @@ els.merchantResponseForm.addEventListener("submit", async (event) => {
     requireFormValue(form.claimId, "Claim ID", 4);
     requireHttpsField(form.merchantResponseUrl, "Merchant response URL");
     const receipt = await addMerchantResponse({
-      client: requireConnectedClient(),
+      client: requireWriteClient(),
       contractAddress: contractAddress(),
       claimId: form.claimId.value,
       merchantResponseUrl: form.merchantResponseUrl.value
@@ -260,7 +291,7 @@ els.resolveClaimForm.addEventListener("submit", async (event) => {
   try {
     requireFormValue(form.claimId, "Claim ID", 4);
     const receipt = await resolveClaim({
-      client: requireConnectedClient(),
+      client: requireWriteClient(),
       contractAddress: contractAddress(),
       claimId: form.claimId.value
     });
@@ -279,7 +310,7 @@ els.readClaimForm.addEventListener("submit", async (event) => {
   try {
     requireFormValue(form.claimId, "Claim ID", 4);
     const claim = await readClaim({
-      client: requireConnectedClient(),
+      client: readClient(),
       contractAddress: contractAddress(),
       claimId: form.claimId.value
     });
@@ -297,3 +328,18 @@ els.readClaimForm.addEventListener("submit", async (event) => {
 
 renderPresets();
 state.recentClaims.forEach((claimId) => logEvent("Recent claim", claimId));
+
+browserProvider()?.on?.("accountsChanged", (accounts) => {
+  const nextAccount = Array.isArray(accounts) && accounts[0] ? String(accounts[0]).trim() : "";
+  if (!nextAccount) {
+    state.writeClient = null;
+    state.connectedAccount = "";
+    setConnectionStatus("Disconnected", "");
+    logEvent("Wallet disconnected", "No browser wallet account is currently selected.");
+    return;
+  }
+  syncConnectedAccount(nextAccount);
+  state.writeClient = null;
+  setConnectionStatus("Reconnect wallet", "error");
+  logEvent("Wallet changed", `Detected account ${shortenAddress(nextAccount)}. Reconnect the desk to continue writing.`);
+});

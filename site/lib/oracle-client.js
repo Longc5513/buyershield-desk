@@ -75,11 +75,39 @@ async function waitForConfirmedExecution(client, txHash) {
   return receipt;
 }
 
-export async function connectStudionetWallet(account) {
+export function createReadClient() {
   return createClient({
-    chain: studionet,
-    account: requireAddress(account, "Wallet account")
+    chain: studionet
   });
+}
+
+export async function connectStudionetWallet({ provider, account }) {
+  if (!provider?.request) {
+    throw new Error("No browser wallet was found. Open the app in a wallet-enabled browser and try again.");
+  }
+
+  const accounts = await provider.request({ method: "eth_requestAccounts" });
+  const connectedAccounts = Array.isArray(accounts) ? accounts.map((item) => requireAddress(item, "Wallet account")) : [];
+  if (!connectedAccounts.length) {
+    throw new Error("No wallet account was returned by the browser wallet.");
+  }
+
+  const selectedAccount = account ? requireAddress(account, "Wallet account") : connectedAccounts[0];
+  if (account && !connectedAccounts.some((item) => item.toLowerCase() === selectedAccount.toLowerCase())) {
+    throw new Error("The wallet account in the field does not match the account currently selected in your wallet.");
+  }
+
+  const client = createClient({
+    chain: studionet,
+    account: selectedAccount,
+    provider
+  });
+
+  await client.connect("studionet");
+  return {
+    account: selectedAccount,
+    client
+  };
 }
 
 export async function createClaim(params) {
@@ -95,7 +123,8 @@ export async function createClaim(params) {
       requireHttpsUrl(params.evidenceUrl, "Evidence URL"),
       requireTrimmedValue(params.orderFacts, "Order facts", 24),
       requireTrimmedValue(params.claimReason, "Claim reason", 16)
-    ]
+    ],
+    value: 0n
   });
 
   return waitForConfirmedExecution(params.client, txHash);
@@ -108,7 +137,8 @@ export async function addMerchantResponse(params) {
     args: [
       requireTrimmedValue(params.claimId, "Claim ID", 4).toLowerCase(),
       requireHttpsUrl(params.merchantResponseUrl, "Merchant response URL")
-    ]
+    ],
+    value: 0n
   });
 
   return waitForConfirmedExecution(params.client, txHash);
@@ -118,7 +148,8 @@ export async function resolveClaim(params) {
   const txHash = await params.client.writeContract({
     address: requireAddress(params.contractAddress || DEFAULT_CONTRACT_ADDRESS, "Contract address"),
     functionName: "resolve_claim",
-    args: [requireTrimmedValue(params.claimId, "Claim ID", 4).toLowerCase()]
+    args: [requireTrimmedValue(params.claimId, "Claim ID", 4).toLowerCase()],
+    value: 0n
   });
 
   return waitForConfirmedExecution(params.client, txHash);
