@@ -122,6 +122,10 @@ function saveRecentClaim(claimId) {
   localStorage.setItem("buyershield-recent-claims", JSON.stringify(state.recentClaims));
 }
 
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function updateDecisionPanel(claim) {
   const verdict = claim?.verdict || "No decision";
   els.decisionVerdict.textContent = verdict;
@@ -139,6 +143,35 @@ function updateDecisionPanel(claim) {
     els.decisionAction.textContent = "Await claim read";
     els.decisionGate.textContent = "Not evaluated";
   }
+}
+
+async function loadClaimIntoView(claimId, options = {}) {
+  const claim = await readClaim({
+    client: readClient(),
+    contractAddress: contractAddress(),
+    claimId
+  });
+
+  els.claimOutput.textContent = JSON.stringify(claim, null, 2);
+  updateDecisionPanel(claim);
+  saveRecentClaim(String(claimId).trim().toLowerCase());
+
+  if (!options.silent) {
+    logEvent("Claim loaded", `Read onchain state for ${String(claimId).trim().toLowerCase()}.`);
+  }
+
+  return claim;
+}
+
+async function waitForDecisionUpdate(claimId) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await delay(5000);
+    const claim = await loadClaimIntoView(claimId, { silent: attempt < 4 });
+    if (claim?.resolved || claim?.consensus_finalized || claim?.verdict) {
+      return claim;
+    }
+  }
+  return null;
 }
 
 function requireWriteClient() {
@@ -290,12 +323,19 @@ els.resolveClaimForm.addEventListener("submit", async (event) => {
   const form = event.currentTarget;
   try {
     requireFormValue(form.claimId, "Claim ID", 4);
+    logEvent("Resolve started", `Waiting for GenLayer consensus on ${form.claimId.value.trim().toLowerCase()}.`);
     const receipt = await resolveClaim({
       client: requireWriteClient(),
       contractAddress: contractAddress(),
       claimId: form.claimId.value
     });
     logEvent("Claim resolved", `resolve_claim accepted in tx ${receipt.hash || receipt.tx_id || "unknown"}.`);
+    const finalClaim = await waitForDecisionUpdate(form.claimId.value);
+    if (finalClaim?.verdict) {
+      logEvent("Decision updated", `Verdict is now ${finalClaim.verdict} for ${String(form.claimId.value).trim().toLowerCase()}.`);
+    } else {
+      logEvent("Decision pending", "Consensus is still settling. Use Read claim again in a few moments for the final verdict.");
+    }
   } catch (error) {
     logEvent("Resolve failed", normalizeErrorMessage(error, "Claim resolution failed."));
     if (!String(form.claimId.value || "").trim()) {
@@ -309,15 +349,7 @@ els.readClaimForm.addEventListener("submit", async (event) => {
   const form = event.currentTarget;
   try {
     requireFormValue(form.claimId, "Claim ID", 4);
-    const claim = await readClaim({
-      client: readClient(),
-      contractAddress: contractAddress(),
-      claimId: form.claimId.value
-    });
-    els.claimOutput.textContent = JSON.stringify(claim, null, 2);
-    updateDecisionPanel(claim);
-    saveRecentClaim(form.claimId.value.trim().toLowerCase());
-    logEvent("Claim loaded", `Read onchain state for ${form.claimId.value.trim().toLowerCase()}.`);
+    await loadClaimIntoView(form.claimId.value);
   } catch (error) {
     logEvent("Read failed", normalizeErrorMessage(error, "Claim read failed."));
     if (!String(form.claimId.value || "").trim()) {
