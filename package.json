@@ -1,0 +1,13 @@
+{
+  "name": "buyershield-desk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "author": "Longc5513 <longc5513@gmail.com>",
+  "description": "A buyer protection operations desk built on top of Buyer Protection Oracle for marketplace and community commerce workflows.",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "test": "node --test tests/project-proof.test.mjs",
+    "verify": "node --test tests/project-proof.test.mjs"
+  }
+}

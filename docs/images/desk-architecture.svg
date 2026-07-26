@@ -1,0 +1,46 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#091017"/>
+  <rect x="44" y="44" width="1312" height="812" rx="34" fill="#0F1821" stroke="#213242" stroke-width="2"/>
+  <text x="94" y="124" fill="#F3F7FB" font-family="Georgia, serif" font-size="42" font-weight="700">BuyerShield Desk</text>
+  <text x="94" y="170" fill="#90A6B8" font-family="Courier New, monospace" font-size="22">Project layer built on top of Buyer Protection Oracle for marketplace and community commerce operations</text>
+
+  <rect x="92" y="236" width="298" height="556" rx="28" fill="#13202B"/>
+  <text x="126" y="292" fill="#F3F7FB" font-family="Georgia, serif" font-size="30" font-weight="700">Operator surfaces</text>
+  <text x="126" y="346" fill="#8EA6B8" font-family="Courier New, monospace" font-size="21">Claim intake form</text>
+  <text x="126" y="382" fill="#8EA6B8" font-family="Courier New, monospace" font-size="21">Merchant response lane</text>
+  <text x="126" y="418" fill="#8EA6B8" font-family="Courier New, monospace" font-size="21">Resolver action panel</text>
+  <text x="126" y="454" fill="#8EA6B8" font-family="Courier New, monospace" font-size="21">Read-back decision console</text>
+  <text x="126" y="490" fill="#8EA6B8" font-family="Courier New, monospace" font-size="21">Ops log + recent case queue</text>
+  <rect x="126" y="558" width="230" height="178" rx="20" fill="#F0A35E"/>
+  <text x="150" y="610" fill="#24170A" font-family="Courier New, monospace" font-size="23" font-weight="700">Execution binding</text>
+  <text x="150" y="648" fill="#24170A" font-family="Courier New, monospace" font-size="19">eligible -> settle buyer side</text>
+  <text x="150" y="680" fill="#24170A" font-family="Courier New, monospace" font-size="19">ineligible -> hold refund path</text>
+  <text x="150" y="712" fill="#24170A" font-family="Courier New, monospace" font-size="19">needs_review -> escalate</text>
+
+  <rect x="456" y="236" width="312" height="126" rx="24" fill="#1F3140"/>
+  <text x="490" y="288" fill="#F3F7FB" font-family="Courier New, monospace" font-size="28" font-weight="700">1. Intake buyer claim</text>
+  <text x="490" y="324" fill="#B0C3D1" font-family="Courier New, monospace" font-size="20">policy URL + product URL + evidence</text>
+
+  <rect x="810" y="236" width="510" height="126" rx="24" fill="#10273A"/>
+  <text x="844" y="288" fill="#F3F7FB" font-family="Courier New, monospace" font-size="28" font-weight="700">2. Real wallet write path</text>
+  <text x="844" y="324" fill="#B0C3D1" font-family="Courier New, monospace" font-size="20">create_claim / add_merchant_response / resolve_claim via genlayer-js</text>
+
+  <rect x="456" y="410" width="864" height="180" rx="28" fill="#13202B" stroke="#2F4A61" stroke-width="2"/>
+  <text x="492" y="468" fill="#F3F7FB" font-family="Georgia, serif" font-size="34" font-weight="700">3. Oracle-backed dispute resolution</text>
+  <text x="492" y="516" fill="#8EA6B8" font-family="Courier New, monospace" font-size="22">BuyerShield Desk delegates adjudication to Buyer Protection Oracle</text>
+  <text x="492" y="552" fill="#8EA6B8" font-family="Courier New, monospace" font-size="22">web evidence + merchant response + consensus validation + onchain result</text>
+
+  <rect x="456" y="636" width="414" height="124" rx="24" fill="#F5F0E5"/>
+  <text x="490" y="688" fill="#1F1B16" font-family="Courier New, monospace" font-size="28" font-weight="700">4. Read decision back</text>
+  <text x="490" y="724" fill="#6E645B" font-family="Courier New, monospace" font-size="20">readContract + ops summary + JSON record</text>
+
+  <rect x="906" y="636" width="414" height="124" rx="24" fill="#1F3140"/>
+  <text x="940" y="688" fill="#F3F7FB" font-family="Courier New, monospace" font-size="28" font-weight="700">5. Act on verdict</text>
+  <text x="940" y="724" fill="#B0C3D1" font-family="Courier New, monospace" font-size="20">refund release, payout hold, or manual escalation</text>
+
+  <path d="M390 298H456" stroke="#6DB7FF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M768 298H810" stroke="#6DB7FF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M888 362C876 390 856 408 812 430" stroke="#6DB7FF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M888 590C872 614 850 632 824 646" stroke="#6DB7FF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1110 590C1124 616 1144 634 1178 646" stroke="#6DB7FF" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BuyerShield Desk</title>
+    <meta
+      name="description"
+      content="Buyer protection operations desk powered by Buyer Protection Oracle on GenLayer."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">Project · Buyer Protection</div>
+          <h1>BuyerShield Desk</h1>
+          <p>
+            A case desk for community marketplaces, escrow operators, and support teams that need a
+            shared onchain answer before refunding, releasing funds, or escalating a buyer claim.
+          </p>
+          <div class="hero-metrics">
+            <div>
+              <span>Contract</span>
+              <strong id="contract-pill">0x85D95D6a...128ED</strong>
+            </div>
+            <div>
+              <span>Network</span>
+              <strong>GenLayer Studionet</strong>
+            </div>
+            <div>
+              <span>Project Fit</span>
+              <strong>Buyer protection workflow</strong>
+            </div>
+          </div>
+        </div>
+        <aside class="hero-panel">
+          <h2>What the desk does</h2>
+          <ul>
+            <li>Open a claim from policy, product, and evidence URLs</li>
+            <li>Attach a merchant response before settlement</li>
+            <li>Resolve the claim through Buyer Protection Oracle</li>
+            <li>Read back the final verdict for payout or support decisions</li>
+          </ul>
+        </aside>
+      </header>
+
+      <main class="grid">
+        <section class="card span-2">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Connection</div>
+              <h2>Desk session</h2>
+            </div>
+            <button class="ghost-button" id="use-default-contract" type="button">Use live contract</button>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Wallet account</span>
+              <input id="wallet-account" placeholder="0x..." />
+            </label>
+            <label>
+              <span>Contract address</span>
+              <input id="contract-address" />
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="connect-button" type="button">Connect desk</button>
+            <span class="status-pill" id="connection-status">Disconnected</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Templates</div>
+              <h2>Starter cases</h2>
+            </div>
+          </div>
+          <div id="preset-list" class="preset-list"></div>
+        </section>
+
+        <section class="card span-2">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Step 1</div>
+              <h2>Create claim</h2>
+            </div>
+          </div>
+
+          <form id="create-claim-form" class="stack">
+            <div class="field-grid">
+              <label><span>Claim ID</span><input name="claimId" required /></label>
+              <label><span>Title</span><input name="title" required /></label>
+            </div>
+            <div class="field-grid">
+              <label><span>Merchant name</span><input name="merchantName" required /></label>
+              <label><span>Policy URL</span><input name="policyUrl" required /></label>
+            </div>
+            <div class="field-grid">
+              <label><span>Product URL</span><input name="productUrl" required /></label>
+              <label><span>Evidence URL</span><input name="evidenceUrl" required /></label>
+            </div>
+            <label><span>Order facts</span><textarea name="orderFacts" rows="3" required></textarea></label>
+            <label><span>Claim reason</span><textarea name="claimReason" rows="3" required></textarea></label>
+            <div class="action-row">
+              <button class="primary-button" type="submit">Write create_claim</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Step 2</div>
+              <h2>Merchant response</h2>
+            </div>
+          </div>
+          <form id="merchant-response-form" class="stack">
+            <label><span>Claim ID</span><input name="claimId" required /></label>
+            <label><span>Merchant response URL</span><input name="merchantResponseUrl" required /></label>
+            <button class="secondary-button" type="submit">Write add_merchant_response</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Step 3</div>
+              <h2>Resolve claim</h2>
+            </div>
+          </div>
+          <form id="resolve-claim-form" class="stack">
+            <label><span>Claim ID</span><input name="claimId" required /></label>
+            <button class="secondary-button" type="submit">Write resolve_claim</button>
+          </form>
+        </section>
+
+        <section class="card span-2">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Step 4</div>
+              <h2>Read back decision</h2>
+            </div>
+          </div>
+          <form id="read-claim-form" class="inline-form">
+            <input name="claimId" placeholder="Claim ID" required />
+            <button class="secondary-button" type="submit">Read claim</button>
+          </form>
+          <pre id="claim-output" class="output-panel">No claim loaded yet.</pre>
+        </section>
+
+        <section class="card span-2">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Decision binding</div>
+              <h2>Operational action panel</h2>
+            </div>
+          </div>
+          <div class="decision-layout">
+            <div class="decision-box">
+              <span>Verdict</span>
+              <strong id="decision-verdict">No decision</strong>
+            </div>
+            <div class="decision-box">
+              <span>Ops action</span>
+              <strong id="decision-action">Await claim read</strong>
+            </div>
+            <div class="decision-box">
+              <span>Escrow / payout gate</span>
+              <strong id="decision-gate">Not evaluated</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card span-3">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Activity</div>
+              <h2>Desk log</h2>
+            </div>
+          </div>
+          <div id="event-log" class="log-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
