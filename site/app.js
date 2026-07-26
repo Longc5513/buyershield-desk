@@ -19,6 +19,7 @@ const els = {
   contractAddress: document.querySelector("#contract-address"),
   connectionStatus: document.querySelector("#connection-status"),
   eventLog: document.querySelector("#event-log"),
+  clearLogButton: document.querySelector("#clear-log-button"),
   claimOutput: document.querySelector("#claim-output"),
   presetList: document.querySelector("#preset-list"),
   decisionVerdict: document.querySelector("#decision-verdict"),
@@ -47,12 +48,60 @@ function logEvent(title, detail) {
   els.eventLog.prepend(node);
 }
 
+function clearEventLog() {
+  els.eventLog.innerHTML = "";
+  state.lastLogFingerprint = "";
+}
+
 function setConnectionStatus(text, variant = "") {
   els.connectionStatus.textContent = text;
   els.connectionStatus.className = "status-pill";
   if (variant) {
     els.connectionStatus.classList.add(variant);
   }
+}
+
+function focusField(field) {
+  field?.focus();
+  field?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function normalizeErrorMessage(error, fallback) {
+  const raw = String(error?.message || fallback || "Request failed.");
+
+  if (raw.includes("not been authorized by the user")) {
+    return "Wallet approval was rejected. Approve the transaction in your wallet and try again.";
+  }
+  if (raw.includes("Missing or invalid parameters")) {
+    return "The contract could not read this claim yet. Check the claim ID and make sure the record exists onchain.";
+  }
+  if (raw.includes("GenLayer execution failed:")) {
+    return raw.replace("GenLayer execution failed:", "Consensus check failed:");
+  }
+  return raw;
+}
+
+function requireFormValue(field, label, minLength = 1, extraHint = "") {
+  const normalized = String(field?.value || "").trim();
+  if (normalized.length < minLength) {
+    const detail = `${label} is required${minLength > 1 ? ` and must be at least ${minLength} characters.` : "."}${extraHint ? ` ${extraHint}` : ""}`;
+    throw new Error(detail);
+  }
+  return normalized;
+}
+
+function requireHttpsField(field, label) {
+  const normalized = requireFormValue(field, label, 12, "Use a full https URL.");
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new Error(`${label} must be a valid https URL.`);
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error(`${label} must use https.`);
+  }
+  return normalized;
 }
 
 function saveRecentClaim(claimId) {
@@ -125,6 +174,11 @@ els.useDefaultContract.addEventListener("click", () => {
   logEvent("Contract preset", "Loaded the live Buyer Protection Oracle address.");
 });
 
+els.clearLogButton?.addEventListener("click", () => {
+  clearEventLog();
+  logEvent("Activity cleared", "Desk log reset for a clean demo session.");
+});
+
 els.connectButton.addEventListener("click", async () => {
   const walletAccount = els.walletAccount.value.trim();
   if (!walletAccount) {
@@ -141,7 +195,7 @@ els.connectButton.addEventListener("click", async () => {
     logEvent("Desk connected", `Ready to use contract ${contractAddress()}.`);
   } catch (error) {
     setConnectionStatus("Connection failed", "error");
-    logEvent("Connection failed", error.message);
+    logEvent("Connection failed", normalizeErrorMessage(error, "Wallet connection failed."));
   }
 });
 
@@ -149,6 +203,14 @@ els.createClaimForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   try {
+    requireFormValue(form.claimId, "Claim ID", 4);
+    requireFormValue(form.title, "Title", 8);
+    requireFormValue(form.merchantName, "Merchant name", 3);
+    requireHttpsField(form.policyUrl, "Policy URL");
+    requireHttpsField(form.productUrl, "Product URL");
+    requireHttpsField(form.evidenceUrl, "Evidence URL");
+    requireFormValue(form.orderFacts, "Order facts", 24, "Summarize the buyer timeline and delivery facts.");
+    requireFormValue(form.claimReason, "Claim reason", 16, "Explain why the buyer should receive a remedy.");
     const receipt = await createClaim({
       client: requireConnectedClient(),
       contractAddress: contractAddress(),
@@ -164,7 +226,10 @@ els.createClaimForm.addEventListener("submit", async (event) => {
     saveRecentClaim(form.claimId.value.trim().toLowerCase());
     logEvent("Claim written", `create_claim accepted in tx ${receipt.hash || receipt.tx_id || "unknown"}.`);
   } catch (error) {
-    logEvent("Claim write failed", error.message);
+    logEvent("Claim write failed", normalizeErrorMessage(error, "Claim submission failed."));
+    if (!String(form.title.value || "").trim()) {
+      focusField(form.title);
+    }
   }
 });
 
@@ -172,6 +237,8 @@ els.merchantResponseForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   try {
+    requireFormValue(form.claimId, "Claim ID", 4);
+    requireHttpsField(form.merchantResponseUrl, "Merchant response URL");
     const receipt = await addMerchantResponse({
       client: requireConnectedClient(),
       contractAddress: contractAddress(),
@@ -180,7 +247,10 @@ els.merchantResponseForm.addEventListener("submit", async (event) => {
     });
     logEvent("Merchant response written", `add_merchant_response accepted in tx ${receipt.hash || receipt.tx_id || "unknown"}.`);
   } catch (error) {
-    logEvent("Merchant response failed", error.message);
+    logEvent("Merchant response failed", normalizeErrorMessage(error, "Merchant response failed."));
+    if (!String(form.merchantResponseUrl.value || "").trim()) {
+      focusField(form.merchantResponseUrl);
+    }
   }
 });
 
@@ -188,6 +258,7 @@ els.resolveClaimForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   try {
+    requireFormValue(form.claimId, "Claim ID", 4);
     const receipt = await resolveClaim({
       client: requireConnectedClient(),
       contractAddress: contractAddress(),
@@ -195,7 +266,10 @@ els.resolveClaimForm.addEventListener("submit", async (event) => {
     });
     logEvent("Claim resolved", `resolve_claim accepted in tx ${receipt.hash || receipt.tx_id || "unknown"}.`);
   } catch (error) {
-    logEvent("Resolve failed", error.message);
+    logEvent("Resolve failed", normalizeErrorMessage(error, "Claim resolution failed."));
+    if (!String(form.claimId.value || "").trim()) {
+      focusField(form.claimId);
+    }
   }
 });
 
@@ -203,6 +277,7 @@ els.readClaimForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   try {
+    requireFormValue(form.claimId, "Claim ID", 4);
     const claim = await readClaim({
       client: requireConnectedClient(),
       contractAddress: contractAddress(),
@@ -213,7 +288,10 @@ els.readClaimForm.addEventListener("submit", async (event) => {
     saveRecentClaim(form.claimId.value.trim().toLowerCase());
     logEvent("Claim loaded", `Read onchain state for ${form.claimId.value.trim().toLowerCase()}.`);
   } catch (error) {
-    logEvent("Read failed", error.message);
+    logEvent("Read failed", normalizeErrorMessage(error, "Claim read failed."));
+    if (!String(form.claimId.value || "").trim()) {
+      focusField(form.claimId);
+    }
   }
 });
 
