@@ -10,7 +10,8 @@ import {
 
 const state = {
   client: null,
-  recentClaims: JSON.parse(localStorage.getItem("buyershield-recent-claims") || "[]")
+  recentClaims: JSON.parse(localStorage.getItem("buyershield-recent-claims") || "[]"),
+  lastLogFingerprint: ""
 };
 
 const els = {
@@ -32,12 +33,26 @@ const els = {
 };
 
 els.contractAddress.value = DEFAULT_CONTRACT_ADDRESS;
+els.walletAccount.value = localStorage.getItem("buyershield-wallet-account") || "";
 
 function logEvent(title, detail) {
+  const fingerprint = `${title}::${detail}`;
+  if (state.lastLogFingerprint === fingerprint) {
+    return;
+  }
+  state.lastLogFingerprint = fingerprint;
   const node = document.createElement("div");
   node.className = "log-item";
   node.innerHTML = `<strong>${title}</strong><span>${detail}</span>`;
   els.eventLog.prepend(node);
+}
+
+function setConnectionStatus(text, variant = "") {
+  els.connectionStatus.textContent = text;
+  els.connectionStatus.className = "status-pill";
+  if (variant) {
+    els.connectionStatus.classList.add(variant);
+  }
 }
 
 function saveRecentClaim(claimId) {
@@ -111,12 +126,21 @@ els.useDefaultContract.addEventListener("click", () => {
 });
 
 els.connectButton.addEventListener("click", async () => {
+  const walletAccount = els.walletAccount.value.trim();
+  if (!walletAccount) {
+    setConnectionStatus("Enter wallet first", "error");
+    logEvent("Connection blocked", "Enter a Studionet wallet address before connecting the desk.");
+    els.walletAccount.focus();
+    return;
+  }
+
   try {
-    state.client = await connectStudionetWallet(els.walletAccount.value.trim());
-    els.connectionStatus.textContent = "Connected";
+    state.client = await connectStudionetWallet(walletAccount);
+    localStorage.setItem("buyershield-wallet-account", walletAccount);
+    setConnectionStatus("Connected", "success");
     logEvent("Desk connected", `Ready to use contract ${contractAddress()}.`);
   } catch (error) {
-    els.connectionStatus.textContent = "Connection failed";
+    setConnectionStatus("Connection failed", "error");
     logEvent("Connection failed", error.message);
   }
 });

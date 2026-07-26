@@ -98,6 +98,13 @@ label span {
   color: var(--muted);
   font-size: 13px;
 }
+.field-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
 input, textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -125,6 +132,16 @@ textarea { resize: vertical; min-height: 96px; }
   border-radius: 999px;
   padding: 8px 12px;
   color: var(--muted);
+}
+.status-pill.error {
+  color: #ffd0d0;
+  border-color: #7a4343;
+  background: rgba(122, 67, 67, 0.18);
+}
+.status-pill.success {
+  color: #d4fff0;
+  border-color: #2d6c61;
+  background: rgba(45, 108, 97, 0.18);
 }
 .preset-list, .log-list { display: grid; gap: 10px; }
 .preset-button {
